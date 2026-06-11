@@ -1,0 +1,40 @@
+# Пример конфига для nginx на сервере (не внутри Docker)
+# Положить в: /etc/nginx/sites-available/team-planning
+# Затем: ln -s /etc/nginx/sites-available/team-planning /etc/nginx/sites-enabled/
+# И: nginx -t && systemctl reload nginx
+
+server {
+    listen 80;
+    server_name example.com www.example.com;  # <- замени на свой домен или IP
+
+    # Редирект на HTTPS (раскомментировать после настройки SSL)
+    # return 301 https://$host$request_uri;
+
+    location / {
+        proxy_pass         http://127.0.0.1:3000;  # <- порт Docker-контейнера (APP_PORT)
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+}
+
+# HTTPS (после получения сертификата через certbot)
+# server {
+#     listen 443 ssl;
+#     server_name example.com www.example.com;
+#
+#     ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+#
+#     location / {
+#         proxy_pass         http://127.0.0.1:3000;
+#         proxy_http_version 1.1;
+#         proxy_set_header   Host              $host;
+#         proxy_set_header   X-Real-IP         $remote_addr;
+#         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+#         proxy_set_header   X-Forwarded-Proto $scheme;
+#     }
+# }
+
