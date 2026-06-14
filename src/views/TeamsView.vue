@@ -17,11 +17,13 @@ import {
 } from '@/domain/planning'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useDataExchange } from '@/composables/useDataExchange'
+import { useAnalytics } from '@/composables/useAnalytics'
 import { usePlanningStore } from '@/stores/planning'
 
 const planningStore = usePlanningStore()
 const confirmDialog = useConfirmDialog()
 const { status: exchangeStatus, exportTeam } = useDataExchange()
+const { track } = useAnalytics()
 
 const roleOptions: Array<{ value: Role; label: string }> = [
   { value: 'frontend', label: 'Frontend' },
@@ -205,6 +207,7 @@ const createTeam = () => {
   }
 
   const team = planningStore.createTeam({ name })
+  track('team_created')
   teamForm.name = ''
   selectedTeamId.value = team.id
   newMemberForm.teamId = team.id

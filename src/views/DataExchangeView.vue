@@ -4,10 +4,12 @@ import { computed, ref } from 'vue'
 import { formatDate } from '@/domain/planning'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useDataExchange, type ImportDraft } from '@/composables/useDataExchange'
+import { useAnalytics } from '@/composables/useAnalytics'
 import { usePlanningStore } from '@/stores/planning'
 
 const planningStore = usePlanningStore()
 const confirmDialog = useConfirmDialog()
+const { track } = useAnalytics()
 const {
   status,
   exportFull,
@@ -77,6 +79,7 @@ const applyImportWithConfirmation = async (draft: ImportDraft) => {
 
   const result = applyImportDraft(draft)
   status.value = result.message
+  track('data_imported', { type: draft.type })
 }
 
 const importFile = async (file: File | undefined) => {
@@ -112,6 +115,7 @@ const resetToDemo = async () => {
   if (!confirmed) return
 
   planningStore.resetToSeedState()
+  track('demo_loaded')
   status.value = 'Демо-данные загружены.'
 }
 
@@ -126,7 +130,28 @@ const clearWorkspace = async () => {
   if (!confirmed) return
 
   planningStore.clearState()
+  track('workspace_cleared')
   status.value = 'Рабочая область очищена.'
+}
+
+const trackExportFull = () => {
+  exportFull()
+  track('data_exported', { type: 'full' })
+}
+
+const trackExportTeam = (teamId: string) => {
+  exportTeam(teamId)
+  track('data_exported', { type: 'team' })
+}
+
+const trackExportSprint = (sprintId: string) => {
+  exportSprint(sprintId)
+  track('data_exported', { type: 'sprint' })
+}
+
+const trackExportAllocationResult = (sprintId: string) => {
+  exportAllocationResult(sprintId)
+  track('data_exported', { type: 'allocation' })
 }
 </script>
 
@@ -155,7 +180,7 @@ const clearWorkspace = async () => {
             <button
               type="button"
               class="w-fit rounded-lg bg-slate-950 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
-              @click="exportFull"
+              @click="trackExportFull"
             >
               Экспорт всего
             </button>
@@ -180,7 +205,7 @@ const clearWorkspace = async () => {
               <button
                 type="button"
                 class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                @click="exportTeam(team.id)"
+                @click="trackExportTeam(team.id)"
               >
                 Экспорт команды
               </button>
@@ -210,7 +235,7 @@ const clearWorkspace = async () => {
                 <button
                   type="button"
                   class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                  @click="exportSprint(sprint.id)"
+                  @click="trackExportSprint(sprint.id)"
                 >
                   Экспорт спринта
                 </button>
@@ -218,7 +243,7 @@ const clearWorkspace = async () => {
                   type="button"
                   :disabled="!sprint.hasAllocation"
                   class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-                  @click="exportAllocationResult(sprint.id)"
+                  @click="trackExportAllocationResult(sprint.id)"
                 >
                   Экспорт расчета
                 </button>

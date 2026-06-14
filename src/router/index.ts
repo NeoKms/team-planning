@@ -66,4 +66,21 @@ const router = createRouter({
   ],
 })
 
+router.afterEach(() => {
+  if (typeof window.ym === 'function') {
+    window.ym(109847069, 'hit', window.location.href, {
+      title: document.title,
+      referer: document.referrer,
+    })
+  }
+
+  // Google Tag Manager — push virtualPageView on SPA navigation
+  window.dataLayer = window.dataLayer || []
+  window.dataLayer.push({
+    event: 'virtualPageView',
+    pageUrl: window.location.href,
+    pageTitle: document.title,
+  })
+})
+
 export default router

@@ -10,6 +10,7 @@ import {
   useAllocationReport,
 } from '@/composables/useAllocationReport'
 import { useDataExchange } from '@/composables/useDataExchange'
+import { useAnalytics } from '@/composables/useAnalytics'
 import { useReviewPrompt } from '@/composables/useReviewPrompt'
 import { usePlanningStore } from '@/stores/planning'
 import { formatDuration, type PlanningState } from '@/domain/planning'
@@ -21,6 +22,7 @@ const props = defineProps<{
 const planningStore = usePlanningStore()
 const { getAllocationShareableLink, decodeAllocationState, createShareableLinkFromState, exportAllocationResult } =
   useDataExchange()
+const { track } = useAnalytics()
 
 const localState = ref<PlanningState | null>(null)
 
@@ -46,6 +48,7 @@ const copyShareLink = async () => {
   try {
     await navigator.clipboard.writeText(link)
     shareLinkCopied.value = true
+    track('report_link_copied')
     setTimeout(() => {
       shareLinkCopied.value = false
     }, 2000)

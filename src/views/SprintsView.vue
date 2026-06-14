@@ -10,11 +10,13 @@ import {
 } from '@/domain/planning'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useDataExchange } from '@/composables/useDataExchange'
+import { useAnalytics } from '@/composables/useAnalytics'
 import { usePlanningStore } from '@/stores/planning'
 
 const planningStore = usePlanningStore()
 const confirmDialog = useConfirmDialog()
 const { status: exchangeStatus, exportSprint } = useDataExchange()
+const { track } = useAnalytics()
 
 // --- Date utilities ---
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -124,6 +126,7 @@ const createSprint = () => {
   const input = toSprintInput(newSprintForm)
   if (!input.teamId || !input.name || !input.startsOn) return
   planningStore.createSprint(input)
+  track('sprint_created', { duration_weeks: input.durationWeeks })
   resetSprintForm(newSprintForm, input.teamId)
   showNewSprintForm.value = false
 }

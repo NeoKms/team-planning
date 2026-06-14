@@ -23,6 +23,7 @@ import {
   type WorkItemType,
 } from '@/domain/planning'
 import { getSprintWorkingDates } from '@/domain/scheduling'
+import { useAnalytics } from '@/composables/useAnalytics'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useDataExchange } from '@/composables/useDataExchange'
 import { usePlanningStore } from '@/stores/planning'
@@ -33,6 +34,7 @@ const props = defineProps<{
 
 const planningStore = usePlanningStore()
 const confirmDialog = useConfirmDialog()
+const { track } = useAnalytics()
 const router = useRouter()
 const { status: exportStatus, exportSprint } = useDataExchange()
 
@@ -737,6 +739,10 @@ const calculateAndOpenAllocation = () => {
   }
 
   planningStore.calculateAllocationForSprint(sprint.value.id)
+  track('allocation_calculated', {
+    sprint_duration_weeks: sprint.value.durationWeeks,
+    work_item_count: workItems.value.length,
+  })
   router.push({ name: 'sprint-allocation', params: { sprintId: sprint.value.id } })
 }
 

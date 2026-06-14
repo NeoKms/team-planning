@@ -9,3 +9,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+interface Window {
+  ym?: (counterId: number, action: string, ...args: unknown[]) => void
+  dataLayer?: Record<string, unknown>[]
+}
+
