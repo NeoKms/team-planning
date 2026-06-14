@@ -2,7 +2,9 @@
 
 @layer base {
   html {
+    font-size: 13px;
     font-family:
+      'Inter Variable',
       Inter,
       ui-sans-serif,
       system-ui,

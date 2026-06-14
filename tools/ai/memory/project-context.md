@@ -5,7 +5,7 @@
 ## Текущая структура
 
 - `src/main.ts` — точка входа приложения.
-- `src/assets/main.css` — глобальный CSS entrypoint с импортом Tailwind CSS и базовыми стилями.
+- `src/assets/main.css` — глобальный CSS entrypoint с импортом Tailwind CSS и базовыми стилями. Использует шрифт `'Inter Variable'` (self-hosted через `@fontsource-variable/inter`, подключён в `main.ts`).
 - `src/App.vue` — корневой Vue-компонент с навигационным layout, `RouterView`, глобальным drag-and-drop импортом `.tpdata`/JSON-файлов, onboarding walkthrough и тостом запроса отзыва. Вычисляет `startsOnReportPath` синхронно во время setup для предотвращения флеша онбординга при открытии shareable-ссылки.
 - `src/components/AllocationTimeline.vue` — переиспользуемый горизонтальный Gantt timeline для распределения и отчета.
 - `src/components/AppConfirmDialog.vue` — глобальная Vue-модалка подтверждения действий; поддерживает обычный boolean confirm и выбор из нескольких действий через `useConfirmDialog().choose()`.
@@ -27,7 +27,7 @@
 - `src/stores/planning.ts` — Pinia store для client-only planning state с localStorage persistence и actions для команд, участников, спринтов, work items, epics, отпусков и запуска расчета распределения. Демо-данные не содержит — они вынесены в `planning.seed.ts`.
 - `src/stores/planning.seed.ts` — демо-данные для онбординга: функция `createSeedState()`, вспомогательные `nextMondayIso()` и `isoDateAddDays()`. Даты спринта и отпусков вычисляются динамически от текущей даты, чтобы демо всегда было актуальным.
 - `public/` — статические файлы.
-- `vite.config.ts` — конфигурация Vite, включая Tailwind CSS Vite plugin.
+- `vite.config.ts` — конфигурация Vite, включая Tailwind CSS Vite plugin. `vueDevTools()` подключается только в dev-режиме (`command === 'serve'`).
 - `eslint.config.ts` — конфигурация ESLint.
 
 ## Команды

@@ -8,8 +8,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import pkg from './package.json'
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [tailwindcss(), vue(), vueJsx(), vueDevTools()],
+export default defineConfig(({ command }) => ({
+  plugins: [tailwindcss(), vue(), vueJsx(), ...(command === 'serve' ? [vueDevTools()] : [])],
   define: {
     'import.meta.env.APP_VERSION': JSON.stringify(pkg.version),
   },
@@ -18,4 +18,4 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
-})
+}))
