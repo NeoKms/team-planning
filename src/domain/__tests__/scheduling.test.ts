@@ -210,6 +210,43 @@ describe('scheduleSprint optimizer', () => {
       `${upstreamQaSlot?.date}:${upstreamQaSlot?.endsAtMinute}`,
     )
   })
+
+  it('keeps auto-assigned QA testing on the same assignee as test case writing', () => {
+    const qa1 = createMember('qa1', 'qa')
+    const qa2 = createMember('qa2', 'qa')
+    const workItem = createWorkItem(
+      'qa-work',
+      1,
+      {},
+      {
+        estimates: {
+          ...emptyWorkEstimates(),
+          qaTestCaseWriting: WORK_DAY_MINUTES,
+          qaTesting: 60,
+        },
+      },
+    )
+
+    const result = scheduleSprint(createState([qa1, qa2], [workItem]), sprintId, createdAt)
+
+    expect(result).toBeDefined()
+
+    const testCaseSlot = result?.slots.find(
+      (slot) =>
+        slot.workItemId === workItem.id &&
+        result.stages.find((stage) => stage.id === slot.stageId)?.type ===
+          'qa-test-case-writing',
+    )
+    const testingSlot = result?.slots.find(
+      (slot) =>
+        slot.workItemId === workItem.id &&
+        result.stages.find((stage) => stage.id === slot.stageId)?.type === 'qa-testing',
+    )
+
+    expect(testCaseSlot).toBeDefined()
+    expect(testingSlot).toBeDefined()
+    expect(testingSlot?.assigneeId).toBe(testCaseSlot?.assigneeId)
+  })
 })
 
 describe('documentation stage behavior', () => {  it('documentation does not block QA testing — QA starts as soon as dev is done', () => {

@@ -37,7 +37,7 @@ watch(
     >
       <div
         v-if="dialog"
-        class="fixed inset-0 z-50 grid place-items-center bg-slate-950/35 px-4 py-6"
+        class="fixed inset-0 z-[70] grid place-items-center bg-slate-950/35 px-4 py-6"
         role="presentation"
         @click.self="cancel"
       >

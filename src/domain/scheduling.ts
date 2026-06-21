@@ -854,6 +854,25 @@ export function scheduleSprint(
   const stageById = new Map(stages.map((stage) => [stage.id, stage]))
   const completionByStageId = new Map<string, ScheduleMarker>()
   const visitingStageIds = new Set<string>()
+
+  const getQaTestCaseStage = (stage: PlanningStage) =>
+    stage.type === 'qa-testing'
+      ? stagesByWorkItemId
+          .get(stage.workItemId)
+          ?.find((candidate) => candidate.type === 'qa-test-case-writing')
+      : undefined
+
+  const inheritQaTestingAssigneeFromTestCases = (stage: PlanningStage) => {
+    if (stage.assigneeId) {
+      return
+    }
+
+    const testCaseStage = getQaTestCaseStage(stage)
+
+    if (testCaseStage?.assigneeId) {
+      stage.assigneeId = testCaseStage.assigneeId
+    }
+  }
   const slots: ScheduledSlot[] = []
   const occupiedSlotsByMemberDate = new Map<string, ScheduledSlot[]>()
 
@@ -1165,6 +1184,7 @@ export function scheduleSprint(
       : sprintStart
 
     visitingStageIds.delete(stage.id)
+    inheritQaTestingAssigneeFromTestCases(stage)
 
     if (!stage.assigneeId) {
       const selectedCandidate = selectEarliestCompletionAssignee(stage, earliestStart)
@@ -1389,6 +1409,20 @@ export function scheduleSprint(
     const simulatedSlots: ScheduledSlot[] = []
     const simulatedOccupiedSlotsByMemberDate = new Map<string, ScheduledSlot[]>()
 
+    const getSimulatedQaTestCaseAssigneeId = (stage: PlanningStage) => {
+      const testCaseStage = getQaTestCaseStage(stage)
+
+      if (!testCaseStage) {
+        return undefined
+      }
+
+      return (
+        assigneeOverrides.get(testCaseStage.id) ??
+        testCaseStage.assigneeId ??
+        simulatedSlots.find((slot) => slot.stageId === testCaseStage.id)?.assigneeId
+      )
+    }
+
     const getSimulatedOccupiedSlots = (memberId: string, date: string) =>
       (simulatedOccupiedSlotsByMemberDate.get(`${memberId}:${date}`) ?? []).sort(
         (left, right) => left.startsAtMinute - right.startsAtMinute,
@@ -1523,6 +1557,12 @@ export function scheduleSprint(
 
       if (explicitAssigneeId) {
         return memberById.get(explicitAssigneeId)
+      }
+
+      const inheritedQaAssigneeId = getSimulatedQaTestCaseAssigneeId(stage)
+
+      if (inheritedQaAssigneeId) {
+        return memberById.get(inheritedQaAssigneeId)
       }
 
       return getStageAssigneeCandidates(stage)

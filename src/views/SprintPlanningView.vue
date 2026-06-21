@@ -199,6 +199,8 @@ const epicForm = reactive<EpicForm>(createEpicForm())
 const durationDrafts = reactive<Record<string, string>>({})
 const editingWorkItemId = ref<string | null>(null)
 const editingEpicId = ref<string | null>(null)
+const workItemFormSnapshot = ref('')
+const epicFormSnapshot = ref('')
 const dependencyToAddId = ref('')
 const showEpicForm = ref(false)
 const showWorkItemForm = ref(false)
@@ -307,6 +309,19 @@ const parseDurationText = (value: string, fallbackMinutes: number) => {
   return hasMatches ? sanitizeMinutes(totalMinutes) : fallbackMinutes
 }
 
+const durationSnapshotValue = (draftKey: string, minutes: number) =>
+  draftKey in durationDrafts ? parseDurationText(durationDrafts[draftKey] ?? '', minutes) : minutes
+
+const clearZeroDurationOnFocus = (draftKey: string, minutes: number, event: Event) => {
+  if (sanitizeMinutes(minutes) !== 0) {
+    return
+  }
+
+  durationDrafts[draftKey] = ''
+  const input = event.target as HTMLInputElement
+  input.value = ''
+}
+
 const setEstimateDurationFromText = (key: keyof WorkEstimates, event: Event) => {
   const draftKey = estimateDraftKey(key)
   const input = event.target as HTMLInputElement
@@ -388,6 +403,87 @@ const canSubmitWorkItem = computed(
   () => Boolean(form.title.trim()) && hasSchedulableWorkItemMinutes.value,
 )
 const canSubmitEpic = computed(() => Boolean(epicForm.title.trim()))
+
+const workItemFormStateForComparison = () => ({
+  epicId: form.epicId,
+  type: form.type,
+  title: form.title,
+  priority: form.priority,
+  estimates: {
+    backend: durationSnapshotValue(estimateDraftKey('backend'), form.estimates.backend),
+    documentation: durationSnapshotValue(
+      estimateDraftKey('documentation'),
+      form.estimates.documentation,
+    ),
+    frontend: durationSnapshotValue(estimateDraftKey('frontend'), form.estimates.frontend),
+    ios: durationSnapshotValue(estimateDraftKey('ios'), form.estimates.ios),
+    android: durationSnapshotValue(estimateDraftKey('android'), form.estimates.android),
+    qaTestCaseWriting: durationSnapshotValue(
+      estimateDraftKey('qaTestCaseWriting'),
+      form.estimates.qaTestCaseWriting,
+    ),
+    qaTesting: durationSnapshotValue(estimateDraftKey('qaTesting'), form.estimates.qaTesting),
+  },
+  assignments: { ...form.assignments },
+  developmentFlow: { ...form.developmentFlow },
+  dependencyIds: [...form.dependencyIds],
+  requiresDesignReview: form.requiresDesignReview,
+  designReviewEstimateMinutes: durationSnapshotValue(
+    designReviewDraftKey,
+    form.designReviewEstimateMinutes,
+  ),
+  requiresReleaseSupport: form.requiresReleaseSupport,
+  releaseSupport: {
+    backend: durationSnapshotValue(releaseSupportDraftKey('backend'), form.releaseSupport.backend),
+    frontend: durationSnapshotValue(
+      releaseSupportDraftKey('frontend'),
+      form.releaseSupport.frontend,
+    ),
+    ios: durationSnapshotValue(releaseSupportDraftKey('ios'), form.releaseSupport.ios),
+    android: durationSnapshotValue(releaseSupportDraftKey('android'), form.releaseSupport.android),
+    qa: durationSnapshotValue(releaseSupportDraftKey('qa'), form.releaseSupport.qa),
+  },
+})
+
+const epicFormStateForComparison = () => ({
+  title: epicForm.title,
+  workItemIds: [...epicForm.workItemIds],
+  releaseSupport: {
+    backend: durationSnapshotValue(
+      epicReleaseSupportDraftKey('backend'),
+      epicForm.releaseSupport.backend,
+    ),
+    frontend: durationSnapshotValue(
+      epicReleaseSupportDraftKey('frontend'),
+      epicForm.releaseSupport.frontend,
+    ),
+    ios: durationSnapshotValue(epicReleaseSupportDraftKey('ios'), epicForm.releaseSupport.ios),
+    android: durationSnapshotValue(
+      epicReleaseSupportDraftKey('android'),
+      epicForm.releaseSupport.android,
+    ),
+    qa: durationSnapshotValue(epicReleaseSupportDraftKey('qa'), epicForm.releaseSupport.qa),
+  },
+})
+
+const snapshotState = (state: unknown) => JSON.stringify(state)
+
+const refreshWorkItemFormSnapshot = () => {
+  workItemFormSnapshot.value = snapshotState(workItemFormStateForComparison())
+}
+
+const refreshEpicFormSnapshot = () => {
+  epicFormSnapshot.value = snapshotState(epicFormStateForComparison())
+}
+
+const isWorkItemFormDirty = computed(
+  () =>
+    showWorkItemForm.value &&
+    snapshotState(workItemFormStateForComparison()) !== workItemFormSnapshot.value,
+)
+const isEpicFormDirty = computed(
+  () => showEpicForm.value && snapshotState(epicFormStateForComparison()) !== epicFormSnapshot.value,
+)
 
 watch(
   () => props.sprintId,
@@ -514,6 +610,7 @@ const resetForm = () => {
   editingWorkItemId.value = null
   dependencyToAddId.value = ''
   clearDurationDrafts()
+  refreshWorkItemFormSnapshot()
   showWorkItemForm.value = false
 }
 
@@ -521,7 +618,46 @@ const resetEpicForm = () => {
   Object.assign(epicForm, createEpicForm())
   editingEpicId.value = null
   clearDurationDrafts()
+  refreshEpicFormSnapshot()
   showEpicForm.value = false
+}
+
+const requestCloseWorkItemForm = async () => {
+  if (!isWorkItemFormDirty.value) {
+    resetForm()
+    return
+  }
+
+  const confirmed = await confirmDialog.confirm({
+    title: 'Закрыть форму без сохранения?',
+    message: 'В форме есть несохраненные изменения. Если закрыть ее сейчас, они будут потеряны.',
+    confirmLabel: 'Закрыть без сохранения',
+    cancelLabel: 'Вернуться к форме',
+    tone: 'danger',
+  })
+
+  if (confirmed) {
+    resetForm()
+  }
+}
+
+const requestCloseEpicForm = async () => {
+  if (!isEpicFormDirty.value) {
+    resetEpicForm()
+    return
+  }
+
+  const confirmed = await confirmDialog.confirm({
+    title: 'Закрыть форму без сохранения?',
+    message: 'В форме есть несохраненные изменения. Если закрыть ее сейчас, они будут потеряны.',
+    confirmLabel: 'Закрыть без сохранения',
+    cancelLabel: 'Вернуться к форме',
+    tone: 'danger',
+  })
+
+  if (confirmed) {
+    resetEpicForm()
+  }
 }
 
 const workItemToForm = (workItem: WorkItem): WorkItemForm => ({
@@ -673,6 +809,7 @@ const startWorkItemEdit = (workItem: WorkItem) => {
   showWorkItemForm.value = true
   editingWorkItemId.value = workItem.id
   Object.assign(form, workItemToForm(workItem))
+  refreshWorkItemFormSnapshot()
 }
 
 const startEpicEdit = (epic: Epic) => {
@@ -687,6 +824,7 @@ const startEpicEdit = (epic: Epic) => {
       ...epic.releaseSupport,
     },
   })
+  refreshEpicFormSnapshot()
 }
 
 const deleteWorkItem = async (workItem: WorkItem) => {
@@ -1137,7 +1275,7 @@ const openNewWorkItemForm = () => {
         <AppModal
           :open="showEpicForm"
           :title="editingEpicId ? 'Редактировать epic' : 'Новый epic'"
-          @close="resetEpicForm"
+          @close="requestCloseEpicForm"
         >
           <form class="grid gap-5" @submit.prevent="submitEpic">
             <label>
@@ -1201,6 +1339,13 @@ const openNewWorkItemForm = () => {
                     "
                     placeholder="2д 3ч 15м"
                     class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                    @focus="
+                      clearZeroDurationOnFocus(
+                        epicReleaseSupportDraftKey(field.key),
+                        epicForm.releaseSupport[field.key],
+                        $event,
+                      )
+                    "
                     @blur="setEpicReleaseSupportDurationFromText(field.key, $event)"
                     @change="setEpicReleaseSupportDurationFromText(field.key, $event)"
                     @input="updateDurationDraft(epicReleaseSupportDraftKey(field.key), $event)"
@@ -1224,7 +1369,7 @@ const openNewWorkItemForm = () => {
                 v-if="editingEpicId"
                 type="button"
                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                @click="resetEpicForm"
+                @click="requestCloseEpicForm"
               >
                 Отмена
               </button>
@@ -1236,7 +1381,7 @@ const openNewWorkItemForm = () => {
           :open="showWorkItemForm"
           :title="editingWorkItemId ? 'Редактировать задачу' : 'Новая задача'"
           size="xl"
-          @close="resetForm"
+          @close="requestCloseWorkItemForm"
         >
           <form class="grid gap-6" @submit.prevent="submitWorkItem">
             <section class="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
@@ -1307,6 +1452,13 @@ const openNewWorkItemForm = () => {
                       "
                       placeholder="2д 3ч 15м"
                       class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                      @focus="
+                        clearZeroDurationOnFocus(
+                          estimateDraftKey(field.key),
+                          form.estimates[field.key],
+                          $event,
+                        )
+                      "
                       @blur="setEstimateDurationFromText(field.key, $event)"
                       @change="setEstimateDurationFromText(field.key, $event)"
                       @input="updateDurationDraft(estimateDraftKey(field.key), $event)"
@@ -1454,6 +1606,13 @@ const openNewWorkItemForm = () => {
                       "
                       placeholder="2д 3ч 15м"
                       class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-fuchsia-500 focus:ring-2 focus:ring-fuchsia-100"
+                      @focus="
+                        clearZeroDurationOnFocus(
+                          designReviewDraftKey,
+                          form.designReviewEstimateMinutes,
+                          $event,
+                        )
+                      "
                       @blur="setDesignReviewDurationFromText"
                       @change="setDesignReviewDurationFromText"
                       @input="updateDurationDraft(designReviewDraftKey, $event)"
@@ -1492,6 +1651,13 @@ const openNewWorkItemForm = () => {
                       "
                       placeholder="2д 3ч 15м"
                       class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                      @focus="
+                        clearZeroDurationOnFocus(
+                          releaseSupportDraftKey(field.key),
+                          form.releaseSupport[field.key],
+                          $event,
+                        )
+                      "
                       @blur="setReleaseSupportDurationFromText(field.key, $event)"
                       @change="setReleaseSupportDurationFromText(field.key, $event)"
                       @input="updateDurationDraft(releaseSupportDraftKey(field.key), $event)"
@@ -1515,7 +1681,7 @@ const openNewWorkItemForm = () => {
                 v-if="editingWorkItemId"
                 type="button"
                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                @click="resetForm"
+                @click="requestCloseWorkItemForm"
               >
                 Отмена
               </button>

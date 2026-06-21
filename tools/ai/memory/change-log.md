@@ -1,5 +1,13 @@
 # AI-facing change log
 
+## 2026-06-21 — Защита форм и единый QA для test cases/testing
+
+- **`src/views/SprintPlanningView.vue`**: формы задачи и epic теперь спрашивают подтверждение при закрытии, если есть несохраненные изменения. Проверка учитывает в том числе незаблюренные поля длительности. Duration-поля с текущим значением `0 мин` очищаются при фокусе, чтобы можно было сразу вводить новую оценку.
+- **`src/components/AppConfirmDialog.vue`**: confirm-dialog поднят на слой `z-[70]`, чтобы предупреждение о несохраненных изменениях отображалось поверх `AppModal` (`z-50`), а не блокировалось формой.
+- **`src/domain/scheduling.ts`**: `qa-testing` без ручного исполнителя наследует автоназначенного исполнителя `qa-test-case-writing` той же задачи; simulation-ветка scheduler-а использует то же правило.
+- **`src/domain/__tests__/scheduling.test.ts`**: добавлен regression-тест, что автоназначенный QA для testing совпадает с QA, который пишет test cases.
+- Проверки: `npm run test`, `npm run build`, `npm run lint`.
+
 ## 2026-06-14 — Клонирование спринта
 
 - **`src/stores/planning.ts`**: добавлен action `cloneSprintWithWorkItems(sourceSprintId, input)` — создаёт новый спринт с полной копией всех work items и epics из исходного, перемапливает зависимости и epic-принадлежность, allocation results не копируются. Экспортируется из стора.

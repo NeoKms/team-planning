@@ -15,8 +15,10 @@
 - Для верстки и визуального дизайна используй Tailwind CSS utility-классы.
 - UI-решения согласовывай с уже существующим стилем проекта.
 - Не используй системные `window.confirm`/`alert` для пользовательских подтверждений; используй общий Vue confirm-dialog через `useConfirmDialog`.
+- Глобальный `AppConfirmDialog` должен отображаться поверх `AppModal`: если меняешь z-index модалок, сохраняй confirm-dialog на более высоком слое.
 
 ## Проверки
 
 - После изменений в TypeScript/Vue-коде по возможности запускай `npm run build`.
 - После изменений, связанных с lint-правилами или форматированием, по возможности запускай `npm run lint`.
+- Для браузерной проверки UI сначала используй in-app Browser через bundled browser skill: прочитай `browser:control-in-app-browser`, подключи `/Users/vladislav/.codex/plugins/cache/openai-bundled/browser/26.616.51431/scripts/browser-client.mjs` в `node_repl`, выполни `setupBrowserRuntime({ globals: globalThis })` и `agent.browsers.get('iab')`. Не делай вывод, что браузер недоступен, только потому что `tool_search` не показал отдельный browser tool. Если браузерная проверка всё равно невозможна, явно скажи об этом в финальном ответе.
